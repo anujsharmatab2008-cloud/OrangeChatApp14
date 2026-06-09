@@ -15,17 +15,16 @@ jobs:
     - name: Set up Python 3.10
       uses: actions/setup-python@v5
       with:
-        python-level: '3.10'
+        python-version: '3.10'
 
     - name: Install Build Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libsqlite3-dev lzip standard-clzip libffi-dev libssl-dev
+        sudo apt-get install -y libsqlite3-dev lzip clzip libffi-dev libssl-dev
 
-    - name: Build with Buildozer (No Cache)
+    - name: Build with Buildozer
       run: |
         pip install --upgrade pip
         pip install buildozer cython==0.29.36 kivy
-        # Force a fresh clean wipe before packaging begins
         buildozer android clean
         buildozer -v android debug
