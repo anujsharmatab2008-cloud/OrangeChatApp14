@@ -18,11 +18,20 @@ jobs:
           sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev tk-dev libgdbm-compat-dev libreoffice-dev libxml2-dev libxslt1-dev
           pip install --user --upgrade buildozer cython virtualenv
 
+      - name: Auto-Accept Android Licenses
+        run: |
+          mkdir -p ~/.android
+          touch ~/.android/repositories.cfg
+          # Create SDK license agreements manually so it never asks
+          mkdir -p /home/runner/.buildozer/android/platform/android-sdk/licenses
+          echo -e "247c16e502352063a9fb1f909019721523f37429\n2847c16e502352063a9fb1f909019721523f37429" > /home/runner/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+
       - name: Build APK with Buildozer
         run: |
           buildozer android debug
         env:
           ACCEPT_ANDROID_SDK_LICENSES: y
+          BUILDOZER_WARN_ON_ROOT: 0
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
