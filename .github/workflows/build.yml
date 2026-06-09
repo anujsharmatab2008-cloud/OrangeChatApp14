@@ -23,8 +23,11 @@ jobs:
         sudo apt-get install -y libsqlite3-dev lzip clzip libffi-dev libssl-dev
 
     - name: Build with Buildozer
+      env:
+        # Pass the system SDK paths directly into Buildozer's execution runtime
+        ANDROID_HOME: /usr/local/lib/android/sdk
+        ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.3.13750724
       run: |
         pip install --upgrade pip
         pip install buildozer cython==0.29.36 kivy
-        # Straight to compilation, letting Buildozer handle the directory setup
         buildozer -v android debug
