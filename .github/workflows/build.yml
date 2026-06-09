@@ -1,38 +1,31 @@
 name: Build Android APK
-on: [push, workflow_dispatch]
+
+on:
+  push:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-22.04
+
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-level: '3.10'
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
+    - name: Install Build Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libsqlite3-dev lzip standard-clzip libffi-dev libssl-dev
 
-      - name: Install Buildozer Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y git zip unzip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev tk-dev libgdbm-compat-dev libreoffice-dev libxml2-dev libxslt1-dev
-          pip install --user --upgrade buildozer cython virtualenv
-
-      - name: Build APK with Buildozer
-        run: |
-          buildozer android debug
-        env:
-          ACCEPT_ANDROID_SDK_LICENSES: y
-          BUILDOZER_WARN_ON_ROOT: 0
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: OrangeChatApp-APK
-          path: bin/*.apk
+    - name: Build with Buildozer (No Cache)
+      run: |
+        pip install --upgrade pip
+        pip install buildozer cython==0.29.36 kivy
+        # Force a fresh clean wipe before packaging begins
+        buildozer android clean
+        buildozer -v android debug
