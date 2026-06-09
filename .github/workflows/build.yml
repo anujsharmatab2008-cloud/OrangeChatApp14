@@ -30,8 +30,6 @@ jobs:
         env:
           ACCEPT_ANDROID_SDK_LICENSES: y
           BUILDOZER_WARN_ON_ROOT: 0
-          ANDROID_HOME: /usr/local/lib/android/sdk
-          ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/25.2.9519653
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
