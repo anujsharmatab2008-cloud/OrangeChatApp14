@@ -7,6 +7,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -15,31 +21,8 @@ jobs:
       - name: Install Buildozer Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev tk-dev libgdbm-compat-dev libreoffice-dev libxml2-dev libxslt1-dev
+          sudo apt-get install -y git zip unzip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev tk-dev libgdbm-compat-dev libreoffice-dev libxml2-dev libxslt1-dev
           pip install --user --upgrade buildozer cython virtualenv
-
-      - name: Pre-setup Modern Android SDK Manager
-        run: |
-          # 1. Create the base platform directory early
-          mkdir -p /home/runner/.buildozer/android/platform/android-sdk
-          
-          # 2. Download and install modern commandline tools manually
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline.zip
-          unzip -q cmdline.zip -d /home/runner/.buildozer/android/platform/android-sdk/
-          rm cmdline.zip
-          
-          # 3. CRITICAL TRICK: Create the legacy tools directory layout Buildozer is hunting for
-          mkdir -p /home/runner/.buildozer/android/platform/android-sdk/tools/bin
-          
-          # 4. Create a symlink shortcut so Buildozer finds sdkmanager exactly where it expects it
-          ln -s /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/bin/sdkmanager /home/runner/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
-
-      - name: Auto-Accept Android SDK Licenses
-        run: |
-          mkdir -p ~/.android
-          touch ~/.android/repositories.cfg
-          mkdir -p /home/runner/.buildozer/android/platform/android-sdk/licenses
-          echo -e "247c16e502352063a9fb1f909019721523f37429\n2847c16e502352063a9fb1f909019721523f37429\nd56f17341b56242645d7a315f5c66259cf125141\n84831b9409646a918e30573bab4c9c91346d8abd" > /home/runner/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
 
       - name: Build APK with Buildozer
         run: |
@@ -47,9 +30,6 @@ jobs:
         env:
           ACCEPT_ANDROID_SDK_LICENSES: y
           BUILDOZER_WARN_ON_ROOT: 0
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: OrangeChatApp-APK
-          path: bin/*.apk
+          # Force buildozer to look at GitHub's pre-installed tools
+          ANDROID_HOME: /usr/local/lib/android/sdk
+          ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/25.2.9519653
