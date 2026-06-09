@@ -13,8 +13,9 @@ from kivymd.uix.textfield import MDTextField
 from kivymd.uix.toolbar import MDTopAppBar
 import requests
 
-# ⚠️ PASTE YOUR FIREBASE URL HERE (Keep the trailing slash, don't include .json here)
+# ⚠️ PASTE YOUR FIREBASE URL HERE
 FIREBASE_URL = "https://orangechat-bf085-default-rtdb.firebaseio.com/"
+
 class WelcomeScreen(MDScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -89,9 +90,8 @@ class WelcomeScreen(MDScreen):
         room_id = self.room_input.text.strip().upper()
         
         if username and room_id:
-            # Verify if room exists in Firebase before entering
             try:
-                response = requests.get(f"{FIREBASE_URL}rooms/{room_id}.json")
+                response = requests.get(f"{FIREBASE_URL}rooms/{room_id}.json", timeout=5)
                 if response.status_code == 200 and response.json() is not None:
                     self.switch_to_chat(username, room_id)
                 else:
@@ -102,13 +102,10 @@ class WelcomeScreen(MDScreen):
     def create_room(self, instance):
         username = self.get_user_details()
         if username:
-            # Generate a unique 6-character Room ID (like Discord code)
             room_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-            
-            # Initialize room structure in Firebase
             initial_data = {"created_by": username, "messages": ""}
             try:
-                requests.put(f"{FIREBASE_URL}rooms/{room_id}.json", json=initial_data)
+                requests.put(f"{FIREBASE_URL}rooms/{room_id}.json", json=initial_data, timeout=5)
                 self.switch_to_chat(username, room_id)
             except Exception:
                 self.status_label.text = "Failed to create room!"
@@ -129,11 +126,10 @@ class ChatScreen(MDScreen):
         # Main Layout
         layout = MDBoxLayout(orientation='vertical')
         
-        # 1. Top App Bar
-        self.toolbar = MDTopAppBar(title="Room: ----", anchor_title="left")
+        # 1. Top App Bar (FIXED: anchor_title removed to prevent crash)
+        self.toolbar = MDTopAppBar(title="Room: ----")
         self.toolbar.md_bg_color = [0.07, 0.07, 0.07, 1] 
         self.toolbar.specific_text_color = [1, 0.43, 0, 1]
-        # Add a back button to leave the room
         self.toolbar.left_action_items = [["arrow-left", lambda x: self.leave_room()]]
         layout.add_widget(self.toolbar)
         
@@ -164,6 +160,7 @@ class ChatScreen(MDScreen):
         input_layout.add_widget(send_btn)
         layout.add_widget(input_layout)
         
+        layout.add_widget(input_layout)
         self.add_widget(layout)
 
     def setup_room(self, username, room_id):
@@ -173,7 +170,6 @@ class ChatScreen(MDScreen):
         self.chat_list.clear_widgets()
         self.last_fetched_keys.clear()
         
-        # Start checking for new messages automatically every 1.5 seconds
         Clock.schedule_interval(self.fetch_messages, 1.5)
 
     def send_message(self, instance):
@@ -181,8 +177,7 @@ class ChatScreen(MDScreen):
         if msg_text and self.room_id:
             payload = {"sender": self.username, "message": msg_text}
             try:
-                # Push message directly into the room's message sequence
-                requests.post(f"{FIREBASE_URL}rooms/{self.room_id}/messages.json", json=payload)
+                requests.post(f"{FIREBASE_URL}rooms/{self.room_id}/messages.json", json=payload, timeout=5)
                 self.msg_input.text = ""
                 self.fetch_messages(0)
             except Exception as e:
@@ -190,19 +185,16 @@ class ChatScreen(MDScreen):
 
     def fetch_messages(self, dt):
         if not self.room_id:
-            return False # Stops the Clock scheduler if room is left
+            return False
             
         try:
-            response = requests.get(f"{FIREBASE_URL}rooms/{self.room_id}/messages.json")
+            response = requests.get(f"{FIREBASE_URL}rooms/{self.room_id}/messages.json", timeout=3)
             if response.status_code == 200 and response.json():
                 messages = response.json()
                 
                 for key, val in messages.items():
-                    # Only append new messages that aren't already drawn on the screen
                     if key not in self.last_fetched_keys:
                         display_text = f"{val['sender']}: {val['message']}"
-                        
-                        # Apply distinctive orange styling for user's own text
                         text_color = [1, 0.43, 0, 1] if val['sender'] == self.username else [1, 1, 1, 1]
                         
                         item = OneLineListItem(text=display_text, theme_text_color="Custom", text_color=text_color)
@@ -212,7 +204,6 @@ class ChatScreen(MDScreen):
             print("Error updating chat stream:", e)
 
     def leave_room(self):
-        # Unschedules the message loop clock and returns back safely
         Clock.unschedule(self.fetch_messages)
         self.room_id = ""
         self.username = ""
@@ -224,7 +215,6 @@ class DiscordStyleChatApp(MDApp):
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "Orange"
         
-        # Manage screens
         sm = ScreenManager()
         sm.add_widget(WelcomeScreen(name='welcome'))
         sm.add_widget(ChatScreen(name='chat'))
