@@ -10,30 +10,32 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.list import MDList, OneLineListItem
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.textfield import MDTextField
-from kivymd.uix.toolbar import MDTopAppBar
 import requests
 
-# ⚠️ PASTE YOUR FIREBASE URL HERE
+# ⚠️ Your Firebase Realtime Database Endpoint URL
 FIREBASE_URL = "https://orangechat-bf085-default-rtdb.firebaseio.com/"
 
 class WelcomeScreen(MDScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
-        # Center container layout
-        main_layout = MDBoxLayout(orientation='vertical', padding=30, spacing=20, size_hint=(0.9, 0.8), pos_hint={"center_x": 0.5, "center_y": 0.5})
+        main_layout = MDBoxLayout(
+            orientation='vertical', 
+            padding=30, 
+            spacing=20, 
+            size_hint=(0.9, 0.8), 
+            pos_hint={"center_x": 0.5, "center_y": 0.5}
+        )
         
-        # Title
         title = MDLabel(
             text="ORANGE CHAT", 
             font_style="H4", 
             halign="center", 
             theme_text_color="Custom", 
-            text_color=[1, 0.43, 0, 1] # Orange
+            text_color=[1, 0.43, 0, 1]
         )
         main_layout.add_widget(title)
         
-        # Username Input
         self.username_input = MDTextField(
             hint_text="Enter your Username",
             mode="round",
@@ -42,7 +44,6 @@ class WelcomeScreen(MDScreen):
         )
         main_layout.add_widget(self.username_input)
         
-        # Room ID Input (For joining)
         self.room_input = MDTextField(
             hint_text="Enter Room ID (To Join)",
             mode="round",
@@ -51,7 +52,6 @@ class WelcomeScreen(MDScreen):
         )
         main_layout.add_widget(self.room_input)
         
-        # Action Buttons Layout
         btn_layout = MDBoxLayout(orientation='horizontal', spacing=15, size_hint_y=None, height="50dp")
         
         join_btn = MDRaisedButton(
@@ -72,7 +72,6 @@ class WelcomeScreen(MDScreen):
         btn_layout.add_widget(create_btn)
         main_layout.add_widget(btn_layout)
         
-        # Error / Status Label
         self.status_label = MDLabel(text="", halign="center", theme_text_color="Error")
         main_layout.add_widget(self.status_label)
         
@@ -123,15 +122,34 @@ class ChatScreen(MDScreen):
         self.room_id = ""
         self.last_fetched_keys = set()
         
-        # Main Layout
         layout = MDBoxLayout(orientation='vertical')
         
-        # 1. Top App Bar (FIXED: anchor_title removed to prevent crash)
-        self.toolbar = MDTopAppBar(title="Room: ----")
-        self.toolbar.md_bg_color = [0.07, 0.07, 0.07, 1] 
-        self.toolbar.specific_text_color = [1, 0.43, 0, 1]
-        self.toolbar.left_action_items = [["arrow-left", lambda x: self.leave_room()]]
-        layout.add_widget(self.toolbar)
+        # 1. Custom, Crash-proof Header Layout
+        header = MDBoxLayout(
+            orientation='horizontal', 
+            size_hint_y=None, 
+            height="56dp", 
+            md_bg_color=[0.07, 0.07, 0.07, 1], 
+            padding=[5, 0, 5, 0],
+            spacing=10
+        )
+        
+        back_btn = MDIconButton(
+            icon="arrow-left", 
+            theme_icon_color="Custom", 
+            icon_color=[1, 0.43, 0, 1],
+            on_release=lambda x: self.leave_room()
+        )
+        header.add_widget(back_btn)
+        
+        self.title_label = MDLabel(
+            text="Room: ----", 
+            theme_text_color="Custom", 
+            text_color=[1, 0.43, 0, 1],
+            valign="middle"
+        )
+        header.add_widget(self.title_label)
+        layout.add_widget(header)
         
         # 2. Chat History Area
         scroll = ScrollView()
@@ -158,15 +176,16 @@ class ChatScreen(MDScreen):
         
         input_layout.add_widget(self.msg_input)
         input_layout.add_widget(send_btn)
+        
+        # FIXED: Added exactly once to prevent tree structure duplication crashes
         layout.add_widget(input_layout)
         
-        layout.add_widget(input_layout)
         self.add_widget(layout)
 
     def setup_room(self, username, room_id):
         self.username = username
         self.room_id = room_id
-        self.toolbar.title = f"Room ID: {room_id}"
+        self.title_label.text = f"Room ID: {room_id}"
         self.chat_list.clear_widgets()
         self.last_fetched_keys.clear()
         
