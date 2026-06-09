@@ -6,7 +6,7 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
 version = 0.1
 
-# FIXED: Forcing highly stable Python 3.11 along with matching Kivy/KivyMD ecosystem
+# FIXED: Removed the stray trailing single quote after openssl
 requirements = python3==3.11.9,kivy==2.3.0,kivymd==1.2.0,requests,urllib3,certifi,openssl
 
 orientation = portrait
