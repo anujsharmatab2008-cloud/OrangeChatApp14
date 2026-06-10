@@ -1,17 +1,31 @@
 import random
 import string
-from kivy.clock import Clock
-from kivy.uix.screenmanager import ScreenManager
-from kivy.uix.scrollview import ScrollView
-from kivy.network.urlrequest import UrlRequest  # <-- FIX: Native asynchronous network handling
-from kivymd.app import MDApp
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.button import MDIconButton, MDRaisedButton
-from kivymd.uix.label import MDLabel
-from kivymd.uix.list import MDList, OneLineListItem
-from kivymd.uix.screen import MDScreen
-from kivymd.uix.textfield import MDTextField
 import json
+import sys
+
+# 1. THE CRASH MONITOR: Captures startup blocks and displays them instantly
+try:
+    from kivy.clock import Clock
+    from kivy.uix.screenmanager import ScreenManager
+    from kivy.uix.scrollview import ScrollView
+    from kivy.network.urlrequest import UrlRequest
+    from kivymd.app import MDApp
+    from kivymd.uix.boxlayout import MDBoxLayout
+    from kivymd.uix.button import MDIconButton, MDRaisedButton
+    from kivymd.uix.label import MDLabel
+    from kivymd.uix.list import MDList, OneLineListItem
+    from kivymd.uix.screen import MDScreen
+    from kivymd.uix.textfield import MDTextField
+except Exception as startup_error:
+    # If a mobile library fails to load, force Android to show it instead of going black
+    from kivy.app import App
+    from kivy.uix.label import Label
+    class CrashApp(App):
+        def build(self):
+            return Label(text=f"CRITICAL BOOT ERROR:\n{str(startup_error)}", halign="center")
+    if __name__ == "__main__":
+        CrashApp().run()
+        sys.exit()
 
 # ⚠️ Your Firebase Realtime Database Endpoint URL
 FIREBASE_URL = "https://orangechat-bf085-default-rtdb.firebaseio.com/"
@@ -91,7 +105,6 @@ class WelcomeScreen(MDScreen):
         
         if username and room_id:
             self.status_label.text = "Connecting..."
-            # FIX: Async network check prevents the UI from locking up on entry
             UrlRequest(
                 f"{FIREBASE_URL}rooms/{room_id}.json",
                 on_success=lambda req, res: self.on_join_success(res, username, room_id),
@@ -247,13 +260,26 @@ class ChatScreen(MDScreen):
 
 class DiscordStyleChatApp(MDApp):
     def build(self):
-        self.theme_cls.theme_style = "Dark"
-        self.theme_cls.primary_palette = "Orange"
-        
-        sm = ScreenManager()
-        sm.add_widget(WelcomeScreen(name='welcome'))
-        sm.add_widget(ChatScreen(name='chat'))
-        return sm
+        try:
+            self.theme_cls.theme_style = "Dark"
+            self.theme_cls.primary_palette = "Orange"
+            
+            sm = ScreenManager()
+            sm.add_widget(WelcomeScreen(name='welcome'))
+            sm.add_widget(ChatScreen(name='chat'))
+            return sm
+        except Exception as ui_error:
+            # 2. RENDER CRASH PROTECTION: If KivyMD styles fail, catch it visually
+            from kivy.uix.label import Label
+            return Label(text=f"UI CONFIGURATION ERROR:\n{str(ui_error)}", halign="center")
 
 if __name__ == "__main__":
-    DiscordStyleChatApp().run()
+    try:
+        DiscordStyleChatApp().run()
+    except Exception as run_error:
+        from kivy.app import App
+        from kivy.uix.label import Label
+        class EmergencyApp(App):
+            def build(self):
+                return Label(text=f"RUNTIME ENGINE ERROR:\n{str(run_error)}", halign="center")
+        EmergencyApp().run()
