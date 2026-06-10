@@ -25,7 +25,8 @@ class WelcomeScreen(Screen):
             self.rect = Rectangle(size=self.size, pos=self.pos)
         self.bind(size=self._update_rect, pos=self._update_rect)
 
-        main_layout = BoxLayout(
+        # We save this as self.main_layout so our keyboard function can find it
+        self.main_layout = BoxLayout(
             orientation='vertical', 
             padding=40, 
             spacing=25, 
@@ -41,7 +42,7 @@ class WelcomeScreen(Screen):
             size_hint_y=None,
             height="50dp"
         )
-        main_layout.add_widget(title)
+        self.main_layout.add_widget(title)
         
         self.username_input = TextInput(
             hint_text="Enter your Username",
@@ -53,7 +54,7 @@ class WelcomeScreen(Screen):
             size_hint_y=None,
             height="50dp"
         )
-        main_layout.add_widget(self.username_input)
+        self.main_layout.add_widget(self.username_input)
         
         self.room_input = TextInput(
             hint_text="Enter Room ID (To Join)",
@@ -65,7 +66,7 @@ class WelcomeScreen(Screen):
             size_hint_y=None,
             height="50dp"
         )
-        main_layout.add_widget(self.room_input)
+        self.main_layout.add_widget(self.room_input)
         
         btn_layout = BoxLayout(orientation='horizontal', spacing=15, size_hint_y=None, height="50dp")
         
@@ -89,12 +90,22 @@ class WelcomeScreen(Screen):
         
         btn_layout.add_widget(join_btn)
         btn_layout.add_widget(create_btn)
-        main_layout.add_widget(btn_layout)
+        self.main_layout.add_widget(btn_layout)
         
         self.status_label = Label(text="", color=[1, 0, 0, 1], size_hint_y=None, height="30dp")
-        main_layout.add_widget(self.status_label)
+        self.main_layout.add_widget(self.status_label)
         
-        self.add_widget(main_layout)
+        self.add_widget(self.main_layout)
+        
+        # Listen for keyboard on the home screen layout
+        Window.bind(on_keyboard_height=self.adjust_for_keyboard)
+
+    def adjust_for_keyboard(self, window, height):
+        if height > 0:
+            # Shift up the login panel layout manually
+            self.main_layout.pos_hint = {"center_x": 0.5, "center_y": 0.75}
+        else:
+            self.main_layout.pos_hint = {"center_x": 0.5, "center_y": 0.5}
 
     def _update_rect(self, instance, value):
         self.rect.pos = instance.pos
@@ -112,7 +123,6 @@ class WelcomeScreen(Screen):
         room_id = self.room_input.text.strip().upper()
         if username and room_id:
             self.status_label.text = "Connecting..."
-            # ✅ FIXED: Added a small timeout so it never hangs the app permanently
             UrlRequest(
                 f"{FIREBASE_URL}rooms/{room_id}.json",
                 on_success=lambda req, res: self.on_join_success(res, username, room_id),
@@ -165,7 +175,7 @@ class ChatScreen(Screen):
             self.rect = Rectangle(size=self.size, pos=self.pos)
         self.bind(size=self._update_rect, pos=self._update_rect)
 
-        layout = BoxLayout(orientation='vertical')
+        self.layout = BoxLayout(orientation='vertical')
         
         header = BoxLayout(orientation='horizontal', size_hint_y=None, height="56dp", padding=10)
         with header.canvas.before:
@@ -186,13 +196,13 @@ class ChatScreen(Screen):
         
         self.title_label = Label(text="Room: ----", color=[1, 0.43, 0, 1], font_size="18sp", bold=True)
         header.add_widget(self.title_label)
-        layout.add_widget(header)
+        self.layout.add_widget(header)
         
         scroll = ScrollView()
         self.chat_list = BoxLayout(orientation='vertical', size_hint_y=None, spacing=10, padding=10)
         self.chat_list.bind(minimum_height=self.chat_list.setter('height'))
         scroll.add_widget(self.chat_list)
-        layout.add_widget(scroll)
+        self.layout.add_widget(scroll)
         
         input_layout = BoxLayout(orientation='horizontal', padding=10, size_hint_y=None, height="60dp", spacing=10)
         self.msg_input = TextInput(
@@ -214,9 +224,19 @@ class ChatScreen(Screen):
         )
         input_layout.add_widget(self.msg_input)
         input_layout.add_widget(send_btn)
-        layout.add_widget(input_layout)
+        self.layout.add_widget(input_layout)
         
-        self.add_widget(layout)
+        self.add_widget(self.layout)
+        
+        # Listen for keyboard inside the chat room screen
+        Window.bind(on_keyboard_height=self.adjust_chat_layout)
+
+    def adjust_chat_layout(self, window, height):
+        if height > 0:
+            # Manually pull up the layout bottom padding to clear keyboard space
+            self.layout.padding = [0, 0, 0, height]
+        else:
+            self.layout.padding = [0, 0, 0, 0]
 
     def _update_rect(self, instance, value):
         self.rect.pos = instance.pos
@@ -273,23 +293,13 @@ class ChatScreen(Screen):
         self.room_id = ""
         self.username = ""
         self.manager.current = 'welcome'
-        
+
 class OrangeChatApp(App):
     def build(self):
-        # 🚀 This binds the keyboard listener to the main window
-        Window.bind(on_keyboard_height=self.adjust_global_window)
-        
         sm = ScreenManager()
         sm.add_widget(WelcomeScreen(name='welcome'))
         sm.add_widget(ChatScreen(name='chat'))
         return sm
-
-    def adjust_global_window(self, window, height):
-        # When the keyboard opens (height > 0), we push the entire app window up
-        if height > 0:
-            window.padding = [0, 0, 0, height]
-        else:
-            window.padding = [0, 0, 0, 0]
 
 if __name__ == "__main__":
     OrangeChatApp().run()
