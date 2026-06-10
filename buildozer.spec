@@ -3,13 +3,15 @@ title = Orange Chat App
 package.name = orangechatapp
 package.domain = org.anuj
 source.dir = .
-source.include_exts = py,png,jpg,kv,atlas
+# ✅ FIXED: Added ttf so the engine renders assets perfectly
+source.include_exts = py,png,jpg,kv,atlas,ttf
 version = 0.1
 
-# UPDATED: We removed the hardcoded old versions so Buildozer grabs the modern matching pair
-# Change this exact line in your buildozer.spec:
-# Change yourequirements = python3,kivy,kivymd==1.2.0,urllib3,certifi,charset_normalizerr requirements line to match this EXACT format:
-requirements = python3,kivy,kivymd==1.2.0,urllib3,certifi,charset_normalizer
+# ✅ FIXED: Pointing Buildozer directly to your new 512x512 icon file
+icon.filename = %(source.dir)s/icon.png
+
+# ✅ FIXED: Cleaned out the copy-paste text clutter and completely removed kivymd
+requirements = python3,kivy,urllib3,certifi,charset_normalizer
 orientation = portrait
 
 # ---------------------------------------------
