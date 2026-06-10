@@ -44,7 +44,6 @@ jobs:
         pip install --upgrade pip
         pip install cython wheel
         pip install git+https://github.com/kivy/buildozer.git
-        buildozer android clean
         buildozer -v android debug
 
     - name: Upload APK Artifact
