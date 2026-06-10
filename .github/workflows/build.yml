@@ -22,28 +22,14 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y \
           build-essential \
-          ccache \
           git \
           libffi-dev \
           libssl-dev \
-          libgtk-3-dev \
-          libgstreamer1.0-dev \
-          gstreamer1.0-plugins-base \
-          gstreamer1.0-plugins-good \
           sqlite3 \
           libsqlite3-dev \
           unzip \
           zip \
           lld \
-          bzip2 \
-          libbz2-dev \
-          liblzma-dev \
-          libreadline-dev \
-          libncursesw5-dev \
-          libgdbm-dev \
-          libdb5.3-dev \
-          uuid-dev \
-          zlib1g-dev \
           lzip \
           clzip
 
