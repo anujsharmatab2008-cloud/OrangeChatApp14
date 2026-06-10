@@ -8,7 +8,8 @@ version = 0.1
 
 # UPDATED: We removed the hardcoded old versions so Buildozer grabs the modern matching pair
 # Change this exact line in your buildozer.spec:
-requirements = python3==3.11.1,kivy,kivymd==1.2.0,requests,urllib3,certifi,charset_normalizer
+# Change your requirements line to match this EXACT format:
+requirements = python3 3.11.1,kivy,kivymd==1.2.0,requests,urllib3,certifi,charset_normalizer
 orientation = portrait
 
 # ---------------------------------------------
