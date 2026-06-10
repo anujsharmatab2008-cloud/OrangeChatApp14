@@ -273,13 +273,23 @@ class ChatScreen(Screen):
         self.room_id = ""
         self.username = ""
         self.manager.current = 'welcome'
-
+        
 class OrangeChatApp(App):
     def build(self):
+        # 🚀 This binds the keyboard listener to the main window
+        Window.bind(on_keyboard_height=self.adjust_global_window)
+        
         sm = ScreenManager()
         sm.add_widget(WelcomeScreen(name='welcome'))
         sm.add_widget(ChatScreen(name='chat'))
         return sm
+
+    def adjust_global_window(self, window, height):
+        # When the keyboard opens (height > 0), we push the entire app window up
+        if height > 0:
+            window.padding = [0, 0, 0, height]
+        else:
+            window.padding = [0, 0, 0, 0]
 
 if __name__ == "__main__":
     OrangeChatApp().run()
