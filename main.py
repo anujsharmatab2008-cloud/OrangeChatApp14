@@ -14,28 +14,34 @@ from kivy.graphics import Color, Rectangle, RoundedRectangle
 from kivy.core.window import Window
 from kivy.storage.jsonstore import JsonStore
 
+# Force Android to resize window layout when soft keyboard triggers
+Window.softinput_mode = 'resize'
 FIREBASE_URL = "https://orangechat-bf085-default-rtdb.firebaseio.com/"
-store = JsonStore('orange_chat_local_v4.json')
+store = JsonStore('orange_chat_local_v6.json')
 
 class WelcomeScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         with self.canvas.before:
-            Color(0.05, 0.05, 0.05, 1)
+            Color(0.05, 0.05, 0.05, 1) # Midnight Black Background
             self.rect = Rectangle(size=self.size, pos=self.pos)
         self.bind(size=self._update_rect, pos=self._update_rect)
 
+        # Outer layout to handle main card and footer text separately
+        outer_layout = BoxLayout(orientation='vertical', padding=[20, 40, 20, 20])
+
+        # Elevated premium container card
         self.main_layout = BoxLayout(
             orientation='vertical', 
             padding=30, 
             spacing=15, 
-            size_hint=(0.88, None),
-            pos_hint={"center_x": 0.5, "center_y": 0.5}
+            size_hint=(0.92, None),
+            pos_hint={"center_x": 0.5}
         )
         self.main_layout.bind(minimum_height=self.main_layout.setter('height'))
         
         with self.main_layout.canvas.before:
-            Color(0.12, 0.12, 0.12, 1)
+            Color(0.12, 0.12, 0.12, 1) # Matte Dark Grey Card
             self.bg_card = RoundedRectangle(size=self.main_layout.size, pos=self.main_layout.pos, radius=[16])
         self.main_layout.bind(
             pos=lambda inst, val: setattr(inst, 'bg_card.pos', val),
@@ -64,7 +70,19 @@ class WelcomeScreen(Screen):
             color=[1, 1, 1, 1], bold=True, size_hint_y=None, height="50dp", on_release=self.register_profile
         )
         self.main_layout.add_widget(save_btn)
-        self.add_widget(self.main_layout)
+        
+        outer_layout.add_widget(BoxLayout(size_hint_y=0.1)) # Top Spacer
+        outer_layout.add_widget(self.main_layout)
+        outer_layout.add_widget(BoxLayout(size_hint_y=0.6)) # Middle Spacer
+        
+        # ✨ BRANDING FOOTER
+        copyright_lbl = Label(
+            text="© 2026 Anuj Sharma. Managed and Developed by Anuj Sharma.",
+            font_size="11sp", color=[0.4, 0.4, 0.4, 1],
+            size_hint_y=None, height="30dp", halign="center"
+        )
+        outer_layout.add_widget(copyright_lbl)
+        self.add_widget(outer_layout)
 
     def on_enter(self):
         if store.exists('profile'):
@@ -93,7 +111,7 @@ class ChatHubScreen(Screen):
 
         main_layout = BoxLayout(orientation='vertical')
         
-        # Profile Info Card
+        # Upper Profile Banner Block
         self.profile_header = BoxLayout(orientation='vertical', size_hint_y=None, height="85dp", padding=15, spacing=2)
         with self.profile_header.canvas.before:
             Color(0.12, 0.12, 0.12, 1)
@@ -105,7 +123,7 @@ class ChatHubScreen(Screen):
         self.profile_header.add_widget(self.profile_name_lbl)
         main_layout.add_widget(self.profile_header)
         
-        # Create/Join Room Controls
+        # Create/Join Room Controls Layout
         controls = BoxLayout(orientation='horizontal', size_hint_y=None, height="65dp", padding=10, spacing=10)
         self.room_input = TextInput(
             hint_text="Room ID to Join/Create", multiline=False,
@@ -120,13 +138,14 @@ class ChatHubScreen(Screen):
         controls.add_widget(action_btn)
         main_layout.add_widget(controls)
         
+        # Chat History Container Stream
         scroll = ScrollView()
         self.groups_list_layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=8, padding=15)
         self.groups_list_layout.bind(minimum_height=self.groups_list_layout.setter('height'))
         scroll.add_widget(self.groups_list_layout)
         main_layout.add_widget(scroll)
         
-        main_layout.add_widget(Label(text="ORANGE CHAT MULTI-ROOM ENGINE", size_hint_y=None, height="20dp", color=[0.3,0.3,0.3,1], font_size="10sp"))
+        main_layout.add_widget(Label(text="ORANGE CHAT SECURE CLOUD DESK", size_hint_y=None, height="20dp", color=[0.3,0.3,0.3,1], font_size="10sp"))
         self.add_widget(main_layout)
 
     def _update_rect(self, instance, value):
@@ -187,7 +206,7 @@ class ChatScreen(Screen):
 
         self.layout = BoxLayout(orientation='vertical')
         
-        # 1. Top Header Bar
+        # 1. Top Header Navigation Bar
         header = BoxLayout(orientation='horizontal', size_hint_y=None, height="55dp", padding=10)
         with header.canvas.before:
             Color(0.14, 0.14, 0.14, 1)
@@ -196,12 +215,11 @@ class ChatScreen(Screen):
 
         back_btn = Button(text="< Hub", size_hint_x=None, width="70dp", background_normal='', background_color=[0,0,0,0], color=[1, 0.43, 0, 1], bold=True, on_release=lambda x: self.leave_room())
         header.add_widget(back_btn)
-        self.title_label = Label(text="Room", color=[1, 1, 1, 1], font_size="16sp", bold=True)
+        self.title_label = Label(text="Room Workspace", color=[1, 1, 1, 1], font_size="16sp", bold=True)
         header.add_widget(self.title_label)
         self.layout.add_widget(header)
         
-        # 🚀 2. FIXED KEYBOARD DESTRUCTION: INPUT BAR PLACED AT THE TOP!
-        # Because it lives at the top of the screen, the keyboard will never reach or cover it.
+        # 2. ANTI-KEYBOARD BLOCKING BAR (MOVED TO THE TOP)
         input_layout = BoxLayout(orientation='horizontal', padding=10, size_hint_y=None, height="60dp", spacing=8)
         with input_layout.canvas.before:
             Color(0.11, 0.11, 0.11, 1)
@@ -209,7 +227,7 @@ class ChatScreen(Screen):
         input_layout.bind(size=lambda inst, v: setattr(inst, 'in_rect.size', v), pos=lambda inst, v: setattr(inst, 'in_rect.pos', v))
 
         self.msg_input = TextInput(
-            hint_text="Type message here...  😀 🔥", multiline=False,
+            hint_text="Type message here...  😀 ✨", multiline=False,
             background_normal='', background_color=[0.18, 0.18, 0.18, 1],
             foreground_color=[1, 1, 1, 1], hint_text_color=[0.4, 0.4, 0.4, 1], padding=[12, 10, 12, 10]
         )
@@ -222,7 +240,7 @@ class ChatScreen(Screen):
         input_layout.add_widget(send_btn)
         self.layout.add_widget(input_layout)
         
-        # 3. Message Stream area (Fills the lower half)
+        # 3. Main Message Streams Scrolling viewport
         scroll = ScrollView()
         self.chat_list = BoxLayout(orientation='vertical', size_hint_y=None, spacing=10, padding=12)
         self.chat_list.bind(minimum_height=self.chat_list.setter('height'))
@@ -230,6 +248,16 @@ class ChatScreen(Screen):
         self.layout.add_widget(scroll)
         
         self.add_widget(self.layout)
+        
+        # 🚀 THE CRITICAL HARDWARE KEYBOARD LISTENER FIXED HERE:
+        Window.bind(on_keyboard_height=self.force_layout_above_keyboard)
+
+    def force_layout_above_keyboard(self, window, height):
+        # Adds dynamic pixel buffers so Kivy moves cleanly if Android fails window sizing
+        if height > 0:
+            self.layout.padding = [0, 0, 0, height]
+        else:
+            self.layout.padding = [0, 0, 0, 0]
 
     def _update_rect(self, instance, value):
         self.rect.pos = instance.pos
@@ -280,11 +308,11 @@ class ChatScreen(Screen):
                     if is_me:
                         row_box.padding = [50, 2, 5, 2]
                         row_box.pos_hint = {"right": 1.0}
-                        card_color = [1, 0.43, 0, 0.95] # Orange right
+                        card_color = [1, 0.43, 0, 0.95]
                     else:
                         row_box.padding = [5, 2, 50, 2]
                         row_box.pos_hint = {"left": 1.0}
-                        card_color = [0.16, 0.16, 0.16, 1] # Dark Left
+                        card_color = [0.16, 0.16, 0.16, 1]
 
                     with bubble_card.canvas.before:
                         Color(*card_color)
@@ -292,7 +320,6 @@ class ChatScreen(Screen):
                     bubble_card.bind(pos=lambda inst, v: setattr(inst, 'bg_shape.pos', v), size=lambda inst, v: setattr(inst, 'bg_shape.size', v))
                     
                     row_box.add_widget(bubble_card)
-                    # Insert new messages right at the top of the stream so they are immediately visible!
                     self.chat_list.add_widget(row_box, index=len(self.chat_list.children))
                     self.last_fetched_keys.add(key)
 
