@@ -3,6 +3,7 @@ import string
 from kivy.clock import Clock
 from kivy.uix.screenmanager import ScreenManager
 from kivy.uix.scrollview import ScrollView
+from kivy.network.urlrequest import UrlRequest  # <-- FIX: Native asynchronous network handling
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDIconButton, MDRaisedButton
@@ -10,7 +11,7 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.list import MDList, OneLineListItem
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.textfield import MDTextField
-import requests
+import json
 
 # ⚠️ Your Firebase Realtime Database Endpoint URL
 FIREBASE_URL = "https://orangechat-bf085-default-rtdb.firebaseio.com/"
@@ -89,27 +90,44 @@ class WelcomeScreen(MDScreen):
         room_id = self.room_input.text.strip().upper()
         
         if username and room_id:
-            try:
-                response = requests.get(f"{FIREBASE_URL}rooms/{room_id}.json", timeout=5)
-                if response.status_code == 200 and response.json() is not None:
-                    self.switch_to_chat(username, room_id)
-                else:
-                    self.status_label.text = "Room ID does not exist!"
-            except Exception:
-                self.status_label.text = "Connection Error!"
+            self.status_label.text = "Connecting..."
+            # FIX: Async network check prevents the UI from locking up on entry
+            UrlRequest(
+                f"{FIREBASE_URL}rooms/{room_id}.json",
+                on_success=lambda req, res: self.on_join_success(res, username, room_id),
+                on_failure=self.on_net_error,
+                on_error=self.on_net_error,
+                timeout=5
+            )
+
+    def on_join_success(self, result, username, room_id):
+        if result is not None:
+            self.switch_to_chat(username, room_id)
+        else:
+            self.status_label.text = "Room ID does not exist!"
 
     def create_room(self, instance):
         username = self.get_user_details()
         if username:
+            self.status_label.text = "Creating Room..."
             room_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-            initial_data = {"created_by": username, "messages": ""}
-            try:
-                requests.put(f"{FIREBASE_URL}rooms/{room_id}.json", json=initial_data, timeout=5)
-                self.switch_to_chat(username, room_id)
-            except Exception:
-                self.status_label.text = "Failed to create room!"
+            initial_data = json.dumps({"created_by": username, "messages": ""})
+            
+            UrlRequest(
+                f"{FIREBASE_URL}rooms/{room_id}.json",
+                req_body=initial_data,
+                method='PUT',
+                on_success=lambda req, res: self.switch_to_chat(username, room_id),
+                on_failure=self.on_net_error,
+                on_error=self.on_net_error,
+                timeout=5
+            )
+
+    def on_net_error(self, req, error):
+        self.status_label.text = "Connection/Server Error!"
 
     def switch_to_chat(self, username, room_id):
+        self.status_label.text = ""
         chat_screen = self.manager.get_screen('chat')
         chat_screen.setup_room(username, room_id)
         self.manager.current = 'chat'
@@ -124,7 +142,6 @@ class ChatScreen(MDScreen):
         
         layout = MDBoxLayout(orientation='vertical')
         
-        # 1. Custom, Crash-proof Header Layout
         header = MDBoxLayout(
             orientation='horizontal', 
             size_hint_y=None, 
@@ -151,13 +168,11 @@ class ChatScreen(MDScreen):
         header.add_widget(self.title_label)
         layout.add_widget(header)
         
-        # 2. Chat History Area
         scroll = ScrollView()
         self.chat_list = MDList()
         scroll.add_widget(self.chat_list)
         layout.add_widget(scroll)
         
-        # 3. Input Message Area Layout
         input_layout = MDBoxLayout(orientation='horizontal', padding=10, size_hint_y=None, height="60dp")
         
         self.msg_input = MDTextField(
@@ -176,8 +191,6 @@ class ChatScreen(MDScreen):
         
         input_layout.add_widget(self.msg_input)
         input_layout.add_widget(send_btn)
-        
-        # FIXED: Added exactly once to prevent tree structure duplication crashes
         layout.add_widget(input_layout)
         
         self.add_widget(layout)
@@ -194,33 +207,36 @@ class ChatScreen(MDScreen):
     def send_message(self, instance):
         msg_text = self.msg_input.text.strip()
         if msg_text and self.room_id:
-            payload = {"sender": self.username, "message": msg_text}
-            try:
-                requests.post(f"{FIREBASE_URL}rooms/{self.room_id}/messages.json", json=payload, timeout=5)
-                self.msg_input.text = ""
-                self.fetch_messages(0)
-            except Exception as e:
-                print("Failed to send:", e)
+            payload = json.dumps({"sender": self.username, "message": msg_text})
+            self.msg_input.text = ""
+            UrlRequest(
+                f"{FIREBASE_URL}rooms/{self.room_id}/messages.json",
+                req_body=payload,
+                method='POST',
+                on_success=lambda req, res: self.fetch_messages(0),
+                timeout=5
+            )
 
     def fetch_messages(self, dt):
         if not self.room_id:
             return False
             
-        try:
-            response = requests.get(f"{FIREBASE_URL}rooms/{self.room_id}/messages.json", timeout=3)
-            if response.status_code == 200 and response.json():
-                messages = response.json()
-                
-                for key, val in messages.items():
-                    if key not in self.last_fetched_keys:
-                        display_text = f"{val['sender']}: {val['message']}"
-                        text_color = [1, 0.43, 0, 1] if val['sender'] == self.username else [1, 1, 1, 1]
-                        
-                        item = OneLineListItem(text=display_text, theme_text_color="Custom", text_color=text_color)
-                        self.chat_list.add_widget(item)
-                        self.last_fetched_keys.add(key)
-        except Exception as e:
-            print("Error updating chat stream:", e)
+        UrlRequest(
+            f"{FIREBASE_URL}rooms/{self.room_id}/messages.json",
+            on_success=self.parse_messages,
+            timeout=3
+        )
+
+    def parse_messages(self, req, result):
+        if result:
+            for key, val in result.items():
+                if key not in self.last_fetched_keys:
+                    display_text = f"{val['sender']}: {val['message']}"
+                    text_color = [1, 0.43, 0, 1] if val['sender'] == self.username else [1, 1, 1, 1]
+                    
+                    item = OneLineListItem(text=display_text, theme_text_color="Custom", text_color=text_color)
+                    self.chat_list.add_widget(item)
+                    self.last_fetched_keys.add(key)
 
     def leave_room(self):
         Clock.unschedule(self.fetch_messages)
