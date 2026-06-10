@@ -215,7 +215,7 @@ class ChatScreen(MDScreen):
         self.chat_list.clear_widgets()
         self.last_fetched_keys.clear()
         
-        Clock.schedule_interval(self.fetch_messages, 1.5)
+        Clock.schedule_interval(self.fetch_messages, 0.5)
 
     def send_message(self, instance):
         msg_text = self.msg_input.text.strip()
