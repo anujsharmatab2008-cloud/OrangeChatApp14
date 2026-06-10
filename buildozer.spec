@@ -9,6 +9,7 @@ version = 0.1
 
 # ✅ FIXED: Pointing Buildozer directly to your new 512x512 icon file
 icon.filename = %(source.dir)s/icon.png
+presplash.filename = %(source.dir)s/icon.png
 
 # ✅ FIXED: Cleaned out the copy-paste text clutter and completely removed kivymd
 requirements = python3,kivy,urllib3,certifi,charset_normalizer
