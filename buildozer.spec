@@ -7,8 +7,8 @@ source.include_exts = py,png,jpg,kv,atlas
 version = 0.1
 
 # UPDATED: We removed the hardcoded old versions so Buildozer grabs the modern matching pair
-requirements = python3,kivy,kivymd,requests,urllib3,certifi
-
+# Change this exact line in your buildozer.spec:
+requirements = python3==3.11.1,kivy,kivymd==1.2.0,requests,urllib3,certifi,charset_normalizer
 orientation = portrait
 
 # ---------------------------------------------
