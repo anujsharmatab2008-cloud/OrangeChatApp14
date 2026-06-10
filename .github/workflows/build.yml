@@ -40,11 +40,14 @@ jobs:
         java-version: '17'
 
     - name: Build APK via Buildozer
-      env:
-        ANDROID_HOME: /usr/local/lib/android/sdk
-        ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.3.13750724
       run: |
         pip install --upgrade pip
-        pip install cython==0.29.36 wheel
+        pip install cython wheel
         pip install git+https://github.com/kivy/buildozer.git
         buildozer -v android debug
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: OrangeChat-APK
+        path: bin/*.apk
